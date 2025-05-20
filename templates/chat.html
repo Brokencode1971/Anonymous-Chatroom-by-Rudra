@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Minimalist Chatroom</title>
+
+  <!-- Socket.IO -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+  <!-- Jitsi Meet External API -->
+  <script src="https://meet.jit.si/external_api.js"></script>
+
+  <style>
+    body {
+      background-color: #121212;
+      color: white;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 0; padding: 0;
+    }
+    #messages {
+      max-width: 400px;
+      margin: 20px auto;
+      text-align: left;
+      height: 300px;
+      overflow-y: scroll;
+      border: 1px solid #333;
+      padding: 10px;
+    }
+    input {
+      width: 70%;
+      padding: 8px;
+      margin-top: 10px;
+      border: 1px solid #333;
+      border-radius: 4px;
+      background: #222;
+      color: #fff;
+    }
+    button {
+      padding: 8px 12px;
+      margin-left: 5px;
+      background-color: #1DB954;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    /* Video Call Icon/Button */
+    #videoButton {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #e74c3c;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      font-size: 24px;
+      line-height: 50px;
+      text-align: center;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+    }
+
+    /* Hidden overlay for Jitsi */
+    #jitsiOverlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background-color: rgba(0,0,0,0.8);
+      z-index: 1000;
+    }
+    #jitsiWrapper {
+      position: absolute;
+      top: 5%; left: 5%;
+      width: 90%; height: 90%;
+      background: #fff;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    #closeJitsi {
+      position: absolute;
+      top: 10px; right: 10px;
+      background: #c0392b;
+      color: #fff;
+      border: none;
+      padding: 6px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      z-index: 1001;
+    }
+    #jitsiContainerInner {
+      width: 100%;
+      height: 100%;
+    }
+  </style>
+</head>
+<body>
+  <h2>Minimalist Chatroom</h2>
+  <div id="messages"></div>
+
+  <input id="messageInput" type="text" placeholder="Type a message..." />
+  <button onclick="sendMessage()">Send</button>
+
+  <!-- Video Call Icon -->
+  <div id="videoButton" title="Start Video Call">🎥</div>
+
+  <!-- Hidden Jitsi Overlay -->
+  <div id="jitsiOverlay">
+    <div id="jitsiWrapper">
+      <button id="closeJitsi">Close</button>
+      <div id="jitsiContainerInner"></div>
+    </div>
+  </div>
+
+  <script>
+    // --- Chatroom Socket.IO setup ---
+    const socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port);
+    const messagesDiv = document.getElementById("messages");
+
+    socket.on("message", msg => {
+      const p = document.createElement("p");
+      p.innerText = msg;
+      messagesDiv.appendChild(p);
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    });
+
+    function sendMessage() {
+      const inp = document.getElementById("messageInput");
+      const text = inp.value.trim();
+      if (text) {
+        socket.send(text);
+        inp.value = "";
+      }
+    }
+
+    // --- Jitsi Meet Embed Logic ---
+    const videoBtn = document.getElementById("videoButton");
+    const overlay = document.getElementById("jitsiOverlay");
+    const closeBtn = document.getElementById("closeJitsi");
+    let jitsiApi = null;
+
+    videoBtn.addEventListener("click", () => {
+      overlay.style.display = "block";
+      // Only init Jitsi once
+      if (!jitsiApi) {
+        const domain = "meet.jit.si";
+        const options = {
+          roomName: "MinimalistChatroomRoom123",  // you can customize this
+          parentNode: document.getElementById("jitsiContainerInner"),
+          width: "100%",
+          height: "100%"
+        };
+        jitsiApi = new JitsiMeetExternalAPI(domain, options);
+      }
+    });
+
+    closeBtn.addEventListener("click", () => {
+      overlay.style.display = "none";
+      if (jitsiApi) {
+        jitsiApi.dispose();        // clean up the iframe & connections
+        jitsiApi = null;
+        // clear out the container so next time it's fresh
+        document.getElementById("jitsiContainerInner").innerHTML = "";
+      }
+    });
+  </script>
+</body>
+</html>
