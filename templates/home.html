@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Join Chatroom</title>
+  <style>
+    body {
+      background: #121212;
+      color: white;
+      font-family: Arial;
+      text-align: center;
+      margin-top: 100px;
+    }
+    input {
+      padding: 10px;
+      width: 250px;
+      border-radius: 5px;
+      border: none;
+      background: #222;
+      color: white;
+    }
+    button {
+      padding: 10px 20px;
+      margin-left: 10px;
+      background: #1DB954;
+      border: none;
+      color: white;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h2>Enter or Create Room</h2>
+  <form onsubmit="enterRoom(event)">
+    <input type="text" id="roomInput" placeholder="Room name..." required />
+    <button type="submit">Enter</button>
+  </form>
+
+  <script>
+    function enterRoom(event) {
+      event.preventDefault();
+      const room = document.getElementById('roomInput').value.trim();
+      if (room) {
+        window.location.href = '/room/' + encodeURIComponent(room);
+      }
+    }
+  </script>
+</body>
+</html>
