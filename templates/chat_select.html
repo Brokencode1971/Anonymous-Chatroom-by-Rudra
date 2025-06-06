@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Welcome {{ username }}</title>
+  <style>
+    body { background: #121212; color: white; font-family: sans-serif; text-align: center; padding-top: 50px; }
+    input, button { padding: 10px; margin: 10px; background: #222; color: white; border: none; border-radius: 5px; }
+  </style>
+</head>
+<body>
+  <h2>Welcome, {{ username }}</h2>
+  <form action="/chat" method="get">
+    <input name="room" placeholder="Enter room name" required>
+    <button type="submit">Enter Room</button>
+  </form>
+  <a href="/logout"><button>Logout</button></a>
+</body>
+</html>
