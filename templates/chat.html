@@ -38,6 +38,15 @@
       background: #1e1e1e;
       border-radius: 5px;
     }
+    #typingIndicator {
+      width: 100%;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 5px 10px;
+      font-style: italic;
+      color: #aaa;
+      height: 20px;
+    }
     #inputRow {
       display: flex;
       width: 100%;
@@ -75,6 +84,10 @@
         margin: 8px auto;
         padding: 8px;
       }
+      #typingIndicator {
+        margin: 0 auto 5px;
+        font-size: 14px;
+      }
       #inputRow {
         margin: 8px auto 15px;
         gap: 8px;
@@ -96,6 +109,7 @@
   </header>
 
   <div id="messages"></div>
+  <div id="typingIndicator"></div>
 
   <div id="inputRow">
     <input id="messageInput" type="text" placeholder="Type a message..." />
@@ -104,8 +118,11 @@
 
   <script>
     const roomName = "{{ room_name }}";
-    const socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port);
+    const username = "{{ session['username'] }}";
+    const socket = io.connect(window.location.origin);
     const messagesDiv = document.getElementById("messages");
+    const typingDiv = document.getElementById("typingIndicator");
+    let typingTimeout;
 
     socket.on("connect", () => {
       socket.emit("join", { room: roomName });
@@ -118,12 +135,24 @@
       messagesDiv.scrollTop = messagesDiv.scrollHeight;
     });
 
+    socket.on("typing", data => {
+      typingDiv.innerText = `${data.username} is typing...`;
+      clearTimeout(typingTimeout);
+      typingTimeout = setTimeout(() => {
+        typingDiv.innerText = "";
+      }, 2000);
+    });
+
+    const messageInput = document.getElementById("messageInput");
+    messageInput.addEventListener("input", () => {
+      socket.emit("typing", { room: roomName, username });
+    });
+
     function sendMessage() {
-      const inp = document.getElementById("messageInput");
-      const text = inp.value.trim();
+      const text = messageInput.value.trim();
       if (text) {
         socket.emit("message", { msg: text, room: roomName });
-        inp.value = "";
+        messageInput.value = "";
       }
     }
   </script>
