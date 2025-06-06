@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for, session
-from flask_socketio import SocketIO, join_room, leave_room, send
+from flask_socketio import SocketIO, join_room, send
 import json
 import os
 
@@ -82,6 +82,13 @@ def handle_message(data):
     room = data["room"]
     msg = data["msg"]
     send(f"{username}: {msg}", to=room)
+
+@socketio.on("typing")
+def handle_typing(data):
+    username = data.get("username", "Guest")
+    room = data.get("room")
+    if room:
+        socketio.emit("typing", {"username": username}, to=room, skip_sid=request.sid)
 
 if __name__ == '__main__':
     socketio.run(app, debug=True, host='0.0.0.0', port=5000)
