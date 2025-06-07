@@ -1,24 +1,96 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Login / Signup</title>
   <style>
-    body { background: #121212; color: white; font-family: sans-serif; text-align: center; padding-top: 50px; }
-    input, button { padding: 10px; margin: 10px; background: #222; color: white; border: none; border-radius: 5px; }
+    :root {
+      --bg-dark: #1e1e1e;
+      --bg-medium: #2a2a2a;
+      --teal: #1abc9c;
+      --text-light: #ececec;
+    }
+    body {
+      background: var(--bg-dark);
+      color: var(--text-light);
+      font-family: sans-serif;
+      text-align: center;
+      padding: 40px 20px;
+      margin: 0;
+    }
+    h1 {
+      color: var(--teal);
+      margin-bottom: 10px;
+    }
+    h2 {
+      margin: 20px 0 10px;
+      font-size: 1.2rem;
+    }
+    .info {
+      font-size: 0.9rem;
+      color: #aaa;
+      max-width: 300px;
+      margin: 10px auto 30px;
+      line-height: 1.4;
+    }
+    form {
+      background: var(--bg-medium);
+      padding: 20px;
+      border-radius: 8px;
+      max-width: 320px;
+      margin: 0 auto 30px;
+    }
+    input {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      background: #111;
+      color: var(--text-light);
+      border: 1px solid #333;
+      border-radius: 5px;
+      font-size: 1rem;
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      background: var(--teal);
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #16a085;
+    }
+    .signup-prompt {
+      color: #ccc;
+      font-size: 0.9rem;
+      margin-bottom: 20px;
+    }
   </style>
 </head>
 <body>
+  <h1>SocialWorld</h1>
+  <p class="info">
+    Welcome! If this is your first time here, please sign up below.  
+    If you already have an account, use the login form.  
+    Remember to save your username and password somewhere safe—there’s no OTP recovery.
+  </p>
+
   <h2>Login</h2>
   <form action="/login" method="post">
-    <input name="username" placeholder="Username" required><br>
-    <input name="password" placeholder="Password" type="password" required><br>
+    <input name="username" placeholder="Username" required />
+    <input name="password" placeholder="Password" type="password" required />
     <button type="submit">Login</button>
   </form>
 
-  <h2>Or Signup</h2>
+  <h2>Signup</h2>
   <form action="/signup" method="post">
-    <input name="username" placeholder="Username" required><br>
-    <input name="password" placeholder="Password" type="password" required><br>
+    <input name="username" placeholder="Choose a username" required />
+    <input name="password" placeholder="Choose a password" type="password" required />
     <button type="submit">Signup</button>
   </form>
 </body>
