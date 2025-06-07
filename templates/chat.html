@@ -8,12 +8,19 @@
   <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
   <script>eruda.init();</script>
   <style>
-    * {
-      box-sizing: border-box;
+    :root {
+      --bg-dark: #1e1e1e;
+      --bg-medium: #2a2a2a;
+      --teal: #1abc9c;
+      --text-light: #ececec;
+      --text-muted: #aaa;
+      --join-red: #e74c3c;
+      --join-glow: rgba(231, 76, 60, 0.6);
     }
+    * { box-sizing: border-box; }
     body {
-      background-color: #121212;
-      color: white;
+      background-color: var(--bg-dark);
+      color: var(--text-light);
       font-family: Arial, sans-serif;
       margin: 0;
       padding: 0;
@@ -24,8 +31,12 @@
     header {
       text-align: center;
       padding: 15px 10px;
-      background-color: #1a1a1a;
+      background-color: var(--bg-medium);
       flex-shrink: 0;
+    }
+    header h2 {
+      color: var(--teal);
+      margin: 0;
     }
     #messages {
       flex: 1;
@@ -35,8 +46,39 @@
       padding: 10px;
       border: 1px solid #333;
       overflow-y: auto;
-      background: #1e1e1e;
+      background: var(--bg-medium);
       border-radius: 5px;
+    }
+    .message {
+      margin: 8px 0;
+      padding: 6px;
+      border-radius: 4px;
+      position: relative;
+    }
+    .message .sender {
+      font-weight: bold;
+      color: var(--teal);
+    }
+    .message .reply {
+      font-size: 0.9em;
+      padding: 4px 6px;
+      margin-bottom: 4px;
+      background: #2f2f2f;
+      border-left: 3px solid var(--teal);
+      border-radius: 3px;
+    }
+    .message button.reply-btn {
+      position: absolute;
+      right: 6px;
+      top: 6px;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 0.8em;
+    }
+    .message button.reply-btn:hover {
+      color: var(--teal);
     }
     #typingIndicator {
       width: 100%;
@@ -44,8 +86,30 @@
       margin: 0 auto;
       padding: 5px 10px;
       font-style: italic;
-      color: #aaa;
+      color: var(--text-muted);
       height: 20px;
+    }
+    #replyBox {
+      width: 100%;
+      max-width: 600px;
+      margin: 0 auto 5px;
+      padding: 8px;
+      background: #2f2f2f;
+      color: var(--text-light);
+      font-size: 0.9em;
+      display: none;
+      position: relative;
+      border-left: 4px solid var(--teal);
+    }
+    #replyBox button {
+      position: absolute;
+      right: 8px;
+      top: 8px;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 1em;
     }
     #inputRow {
       display: flex;
@@ -59,13 +123,13 @@
       padding: 12px;
       border: 1px solid #333;
       border-radius: 4px;
-      background: #222;
-      color: #fff;
+      background: var(--bg-dark);
+      color: var(--text-light);
       font-size: 16px;
     }
     #sendButton {
       padding: 12px 16px;
-      background-color: #1DB954;
+      background-color: var(--teal);
       color: white;
       border: none;
       border-radius: 4px;
@@ -77,29 +141,12 @@
       opacity: 0.8;
     }
     @media (max-width: 480px) {
-      header {
-        padding: 12px 8px;
-      }
-      #messages {
-        margin: 8px auto;
-        padding: 8px;
-      }
-      #typingIndicator {
-        margin: 0 auto 5px;
-        font-size: 14px;
-      }
-      #inputRow {
-        margin: 8px auto 15px;
-        gap: 8px;
-      }
-      #messageInput {
-        padding: 10px;
-        font-size: 14px;
-      }
-      #sendButton {
-        padding: 10px 12px;
-        font-size: 14px;
-      }
+      header { padding: 12px 8px; }
+      #messages { margin: 8px auto; padding: 8px; }
+      #typingIndicator, #replyBox { font-size: 14px; }
+      #inputRow { margin: 8px auto 15px; gap: 8px; }
+      #messageInput { padding: 10px; font-size: 14px; }
+      #sendButton { padding: 10px 12px; font-size: 14px; }
     }
   </style>
 </head>
@@ -110,6 +157,10 @@
 
   <div id="messages"></div>
   <div id="typingIndicator"></div>
+  <div id="replyBox">
+    Replying to: <span id="replyText"></span>
+    <button onclick="cancelReply()">×</button>
+  </div>
 
   <div id="inputRow">
     <input id="messageInput" type="text" placeholder="Type a message..." />
@@ -122,16 +173,39 @@
     const socket = io.connect(window.location.origin);
     const messagesDiv = document.getElementById("messages");
     const typingDiv = document.getElementById("typingIndicator");
+    const replyBox = document.getElementById("replyBox");
+    const replyTextSpan = document.getElementById("replyText");
+    let replyToId = null, replyText = "";
     let typingTimeout;
 
     socket.on("connect", () => {
       socket.emit("join", { room: roomName });
     });
 
-    socket.on("message", msg => {
-      const p = document.createElement("p");
-      p.innerText = msg;
-      messagesDiv.appendChild(p);
+    socket.on("message", data => {
+      const { type, id, sender, text, replyTo, replyText: rText } = data;
+      const div = document.createElement("div");
+      div.classList.add("message");
+      div.dataset.id = id;
+
+      if (type === "join") {
+        div.classList.add("join");
+        div.innerHTML = `<span style="color: var(--join-red); text-shadow: 0 0 8px var(--join-glow)">${sender}</span> has joined the room.`;
+      } else {
+        let inner = `<span class="sender">${sender}:</span> `;
+        if (replyTo && rText) {
+          inner += `<div class="reply">${rText}</div>`;
+        }
+        inner += `<span>${text}</span>`;
+        div.innerHTML = inner;
+        const btn = document.createElement("button");
+        btn.classList.add("reply-btn");
+        btn.innerText = "Reply";
+        btn.onclick = () => startReply(id, sender, rText || text);
+        div.appendChild(btn);
+      }
+
+      messagesDiv.appendChild(div);
       messagesDiv.scrollTop = messagesDiv.scrollHeight;
     });
 
@@ -143,17 +217,36 @@
       }, 2000);
     });
 
-    const messageInput = document.getElementById("messageInput");
-    messageInput.addEventListener("input", () => {
+    document.getElementById("messageInput").addEventListener("input", () => {
       socket.emit("typing", { room: roomName, username });
     });
 
+    function startReply(id, sender, textToReply) {
+      replyToId = id;
+      replyText = `${sender}: ${textToReply}`;
+      replyTextSpan.innerText = replyText;
+      replyBox.style.display = "block";
+      document.getElementById("messageInput").focus();
+    }
+
+    function cancelReply() {
+      replyToId = null;
+      replyText = "";
+      replyBox.style.display = "none";
+    }
+
     function sendMessage() {
-      const text = messageInput.value.trim();
-      if (text) {
-        socket.emit("message", { msg: text, room: roomName });
-        messageInput.value = "";
-      }
+      const inp = document.getElementById("messageInput");
+      const msg = inp.value.trim();
+      if (!msg) return;
+      socket.emit("message", {
+        room: roomName,
+        msg,
+        replyTo: replyToId,
+        replyText
+      });
+      inp.value = "";
+      cancelReply();
     }
   </script>
 </body>
