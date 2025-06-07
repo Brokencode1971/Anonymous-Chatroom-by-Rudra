@@ -1,13 +1,15 @@
 from flask import Flask, render_template, request, redirect, url_for, session
-from flask_socketio import SocketIO, join_room, send
+from flask_socketio import SocketIO, join_room, emit
 import json
 import os
+import uuid
 
 app = Flask(__name__)
-app.secret_key = "any_random_secret_key"
+app.secret_key = "your_secret_key"
 socketio = SocketIO(app)
 
 USERS_FILE = "users.json"
+online_users = set()
 
 def load_users():
     if not os.path.exists(USERS_FILE):
@@ -30,7 +32,6 @@ def login():
     users = load_users()
     username = request.form["username"]
     password = request.form["password"]
-
     if username in users and users[username] == password:
         session["username"] = username
         return redirect(url_for("chat_select"))
@@ -41,7 +42,6 @@ def signup():
     users = load_users()
     username = request.form["username"]
     password = request.form["password"]
-
     if username in users:
         return "Username already exists. <a href='/'>Try again</a>"
     users[username] = password
@@ -72,16 +72,31 @@ def chat():
 @socketio.on("join")
 def handle_join(data):
     username = session.get("username", "Guest")
-    room = data["room"]
+    room = data.get("room")
     join_room(room)
-    send(f"{username} has joined the room.", to=room)
+    emit("message", {
+        "type": "join",
+        "sender": username,
+        "text": f"{username} has joined the room.",
+        "id": str(uuid.uuid4())
+    }, to=room)
 
 @socketio.on("message")
 def handle_message(data):
     username = session.get("username", "Guest")
-    room = data["room"]
-    msg = data["msg"]
-    send(f"{username}: {msg}", to=room)
+    room = data.get("room")
+    msg_text = data.get("msg")
+    reply_to = data.get("replyTo")
+    reply_text = data.get("replyText")
+    message_payload = {
+        "type": "chat",
+        "id": str(uuid.uuid4()),
+        "sender": username,
+        "text": msg_text,
+        "replyTo": reply_to,
+        "replyText": reply_text
+    }
+    emit("message", message_payload, to=room)
 
 @socketio.on("typing")
 def handle_typing(data):
@@ -90,5 +105,19 @@ def handle_typing(data):
     if room:
         socketio.emit("typing", {"username": username}, to=room, skip_sid=request.sid)
 
-if __name__ == '__main__':
+@socketio.on("room_select_connect")
+def handle_room_select_connect(data):
+    username = data.get("username")
+    if username:
+        online_users.add(username)
+        emit("online_users", {"users": list(online_users)}, broadcast=True)
+
+@socketio.on("room_select_disconnect")
+def handle_room_select_disconnect(data):
+    username = data.get("username")
+    if username and username in online_users:
+        online_users.remove(username)
+        emit("online_users", {"users": list(online_users)}, broadcast=True)
+
+if __name__ == "__main__":
     socketio.run(app, debug=True, host='0.0.0.0', port=5000)
