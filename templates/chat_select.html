@@ -1,18 +1,166 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Welcome {{ username }}</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
   <style>
-    body { background: #121212; color: white; font-family: sans-serif; text-align: center; padding-top: 50px; }
-    input, button { padding: 10px; margin: 10px; background: #222; color: white; border: none; border-radius: 5px; }
+    :root {
+      --bg-dark: #1e1e1e;
+      --bg-medium: #2a2a2a;
+      --teal: #1abc9c;
+      --text-light: #ececec;
+      --text-muted: #aaa;
+    }
+    body {
+      background: var(--bg-dark);
+      color: var(--text-light);
+      font-family: sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 40px 20px;
+    }
+    h2 {
+      color: var(--teal);
+      margin-bottom: 10px;
+    }
+    .info {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-bottom: 30px;
+      line-height: 1.4;
+      max-width: 360px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    form, .user-panel {
+      background: var(--bg-medium);
+      padding: 20px;
+      border-radius: 8px;
+      max-width: 360px;
+      margin: 0 auto 20px;
+    }
+    input {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      background: #111;
+      color: var(--text-light);
+      border: 1px solid #333;
+      border-radius: 5px;
+      font-size: 1rem;
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      background: var(--teal);
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #16a085;
+    }
+    #onlineInfo {
+      font-size: 1rem;
+      cursor: pointer;
+      margin-bottom: 10px;
+    }
+    #userList {
+      display: none;
+      background: var(--bg-dark);
+      color: var(--text-light);
+      padding: 10px;
+      border: 1px solid #444;
+      border-radius: 5px;
+      text-align: left;
+      max-width: 360px;
+      margin: 10px auto;
+    }
+    #userList p {
+      margin: 5px 0;
+      padding: 5px;
+      cursor: pointer;
+      border-radius: 3px;
+    }
+    #userList p:hover {
+      background: #333;
+    }
+    a.logout-button {
+      display: inline-block;
+      margin-top: 10px;
+      background: var(--bg-medium);
+      color: var(--text-light);
+      padding: 10px 20px;
+      border-radius: 5px;
+      text-decoration: none;
+      font-size: 1rem;
+    }
+    a.logout-button:hover {
+      background: #333;
+    }
   </style>
 </head>
 <body>
   <h2>Welcome, {{ username }}</h2>
+  <p class="info">
+    Create a new room by entering a name below, or join an existing room by using the same name.  
+    Chat happens in real time—invite your friends to join!
+  </p>
+
+  <div class="user-panel">
+    <div id="onlineInfo">
+      👥 <span id="onlineCount">0</span> online
+    </div>
+    <div id="userList"></div>
+  </div>
+
   <form action="/chat" method="get">
-    <input name="room" placeholder="Enter room name" required>
+    <input name="room" placeholder="Enter room name" required />
     <button type="submit">Enter Room</button>
   </form>
-  <a href="/logout"><button>Logout</button></a>
+
+  <a href="/logout" class="logout-button">Logout</a>
+
+  <script>
+    const socket = io.connect(window.location.origin);
+    const onlineCountSpan = document.getElementById("onlineCount");
+    const userListDiv = document.getElementById("userList");
+    const onlineInfoDiv = document.getElementById("onlineInfo");
+    const currentUser = "{{ username }}";
+
+    onlineInfoDiv.addEventListener("click", () => {
+      userListDiv.style.display = (userListDiv.style.display === "block") ? "none" : "block";
+    });
+
+    socket.on("online_users", data => {
+      const users = data.users;
+      onlineCountSpan.innerText = users.length;
+      userListDiv.innerHTML = "";
+      users.forEach(u => {
+        const p = document.createElement("p");
+        p.innerText = u;
+        if (u !== currentUser) {
+          p.addEventListener("click", () => {
+            const names = [currentUser, u].sort();
+            const roomName = `dm_${names[0]}__${names[1]}`;
+            window.location.href = `/chat?room=${encodeURIComponent(roomName)}`;
+          });
+        } else {
+          p.style.opacity = "0.6";
+        }
+        userListDiv.appendChild(p);
+      });
+    });
+
+    socket.emit("room_select_connect", { username: currentUser });
+    window.addEventListener("beforeunload", () => {
+      socket.emit("room_select_disconnect", { username: currentUser });
+    });
+  </script>
 </body>
 </html>
